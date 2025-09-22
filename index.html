@@ -1,14 +1,91 @@
-<!doctype html>
-<html lang='pt-br'>
-<head>
-  <meta charset='utf-8'>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>Sucesso Flats</title>
-  <link rel='stylesheet' href='./src/styles/normalize.css'>
-  <link rel='stylesheet' href='./src/assets/tokens.css'>
-</head>
 <body>
-  <h1>Sucesso Flats</h1>
-  <p>Site em constru��o. Em breve: listagem de flats, calend�rio e reserva com pagamento.</p>
+  <header class="site-header">
+    <div class="container row">
+      <div class="logo h2">Sucesso <span class="accent">Flats</span></div>
+      <nav class="nav">
+        <a href="#">Home</a>
+        <a href="#flats">Flats</a>
+        <a href="#contato">Contato</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-wrap">
+      <div class="stack-md">
+        <span class="kicker">Perto do Aeroporto de Teresina</span>
+        <h1 class="h1">Flats modernos com check-in flexível e reserva online</h1>
+        <p class="subtitle">Confirmação imediata, Wi-Fi rápido, ar-condicionado e limpeza padrão hotelaria.</p>
+        <div class="stack-sm" style="display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn btn-primary" href="#flats">Ver disponibilidade</a>
+          <a class="btn btn-outline" href="#contato">Falar no WhatsApp</a>
+        </div>
+      </div>
+      <div class="hero-art"></div>
+    </div>
+  </section>
+
+  <section id="flats" class="section">
+    <div class="container">
+      <h2 class="h2">Nossos 4 Flats</h2>
+      <div class="cards">
+        <article class="card">
+          <div class="card__media">FOTO</div>
+          <div class="card__body">
+            <div class="badge">A 5 min do aeroporto</div>
+            <h3 class="card__title">Flat Aeroporto 01</h3>
+            <p class="card__meta">1 quarto · Wi-Fi · Ar-condicionado</p>
+            <div class="card__footer">
+              <span class="muted">R$ 189/noite</span>
+              <a class="btn btn-primary" href="#">Reservar</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card__media">FOTO</div>
+          <div class="card__body">
+            <div class="badge">Smart Check-in</div>
+            <h3 class="card__title">Flat Aeroporto 02</h3>
+            <p class="card__meta">Cozinha completa · Estacionamento</p>
+            <div class="card__footer">
+              <span class="muted">R$ 199/noite</span>
+              <a class="btn btn-primary" href="#">Reservar</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card__media">FOTO</div>
+          <div class="card__body">
+            <div class="badge">Studio</div>
+            <h3 class="card__title">Flat Aeroporto 03</h3>
+            <p class="card__meta">TV · Cama Queen</p>
+            <div class="card__footer">
+              <span class="muted">R$ 179/noite</span>
+              <a class="btn btn-primary" href="#">Reservar</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card__media">FOTO</div>
+          <div class="card__body">
+            <div class="badge">Pet friendly</div>
+            <h3 class="card__title">Flat Aeroporto 04</h3>
+            <p class="card__meta">2 quartos · Varanda</p>
+            <div class="card__footer">
+              <span class="muted">R$ 249/noite</span>
+              <a class="btn btn-primary" href="#">Reservar</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">© <span id="year"></span> Sucesso Flats — Próximo ao Aeroporto de Teresina.</div>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 </body>
-</html>
