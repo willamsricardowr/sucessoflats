@@ -1,8 +1,22 @@
 :root {
-  --color-primary: #1E3A8A;
-  --color-accent:  #2563EB;
-  --color-black:   #0B0D12;
-  --color-gold:    #C9A44A;
-  --color-bronze:  #B87333;
-  --bg: #FFFFFF;
+  /* 🎨 Cores principais */
+  --color-white: #FFFFFF;
+  --color-blue-base: #1E3A8A;
+  --color-blue-accent: #2563EB;
+  --color-black: #0B0D12;
+  --color-gold: #C9A44A;
+  --color-bronze: #B87333;
+
+  /* 🔠 Tipografia */
+  --font-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+
+  /* 📏 Espaçamentos */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
 }
