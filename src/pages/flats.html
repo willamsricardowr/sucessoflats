@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flats • Sucesso Flat’s</title>
+  <link rel="stylesheet" href="../styles/normalize.css" />
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container row">
+      <a class="logo h2" href="./index.html">Sucesso <span class="accent">Flats</span></a>
+      <nav class="nav">
+        <a href="./index.html">Home</a>
+        <a href="./flats.html" aria-current="page">Flats</a>
+        <a href="#contato">Contato</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="mt-xl">Nossos flats</h1>
+
+    <!-- Filtros -->
+    <section class="filters" aria-labelledby="filtros">
+      <h2 id="filtros" class="sr-only">Filtros</h2>
+      <form id="filters-form">
+        <label>
+          Preço máx. (R$)
+          <input id="priceMax" type="number" min="0" step="1" placeholder="Ex.: 150" />
+        </label>
+
+        <fieldset>
+          <legend>Amenidades</legend>
+          <label><input type="checkbox" name="amenidade" value="wifi" /> Wi-Fi</label>
+          <label><input type="checkbox" name="amenidade" value="ar-condicionado" /> Ar-condicionado</label>
+          <label><input type="checkbox" name="amenidade" value="tv" /> TV</label>
+          <label><input type="checkbox" name="amenidade" value="cozinha" /> Cozinha</label>
+          <label><input type="checkbox" name="amenidade" value="estacionamento" /> Estacionamento</label>
+          <label><input type="checkbox" name="amenidade" value="maquina-lavar" /> Máquina de lavar</label>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary">Aplicar</button>
+        <button type="button" id="btnClear" class="btn-secondary">Limpar</button>
+      </form>
+    </section>
+
+    <!-- Grid -->
+    <section aria-live="polite" aria-busy="true">
+      <div id="grid" class="grid">
+        <div class="card skeleton"></div>
+        <div class="card skeleton"></div>
+        <div class="card skeleton"></div>
+        <div class="card skeleton"></div>
+      </div>
+      <p id="empty" class="muted" hidden>Nenhum flat encontrado.</p>
+    </section>
+  </main>
+
+  <footer id="contato" class="site-footer">
+    <div class="container">© 2025 Sucesso Flat’s • <a href="https://wa.me/SEU_ZAP" target="_blank" rel="noopener">Fale no WhatsApp</a></div>
+  </footer>
+
+  <script src="../utils/env.js"></script>
+  <script src="./flats.js" type="module"></script>
+</body>
+</html>

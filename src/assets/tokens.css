@@ -20,3 +20,37 @@
   --space-lg: 24px;
   --space-xl: 40px;
 }
+/* === Sucesso Flats — Paleta oficial (preto + dourado + bronze) === */
+:root {
+  /* 🎨 Cores principais (atualizadas) */
+  --color-white: #FFFFFF;
+  --color-black: #000000;     /* fundo/header/typografia forte */
+  --color-gold:  #AE8648;     /* destaque principal */
+  --color-bronze:#8B6A2E;     /* sombra do dourado (hover/gradiente) */
+
+  /* (descontinuar azuis) — mantenho por retrocompatibilidade, apontando p/ dourado */
+  --color-blue-base:   var(--color-black);
+  --color-blue-accent: var(--color-gold);
+
+  /* Aliases úteis */
+  --sf-bg:    var(--color-white);
+  --sf-text:  #0B1320;        /* corpo de texto sobre claro */
+  --sf-muted: #6B7280;
+  --sf-border:#E5E7EB;
+
+  /* Tipografia (mantém) */
+  --font-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+
+  /* Espaçamentos (mantém) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+
+  /* Gradiente oficial de ação */
+  --grad-primary: linear-gradient(180deg, var(--color-gold), var(--color-bronze));
+}

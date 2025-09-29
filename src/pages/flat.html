@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalhe do Flat • Sucesso Flats</title>
+
+  <!-- CSS (ordem) -->
+  <link rel="stylesheet" href="../styles/normalize.css" />
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+
+  <!-- Leaflet (mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    .breadcrumb { margin: var(--space-md) 0; font-size: 14px; }
+    .detail { display:grid; gap: var(--space-lg); grid-template-columns: 1fr; }
+    .gallery { display:grid; gap: var(--space-md); }
+    .gallery-main { width:100%; height: 320px; object-fit:cover; border-radius:12px; background:#f3f4f6; }
+    .thumbs { display:grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap:8px; }
+    .thumbs img { width:100%; height:70px; object-fit:cover; border-radius:8px; cursor:pointer; }
+    .panel { border:1px solid #e5e7eb; border-radius:12px; padding:var(--space-md); background:#fff; }
+    .price { font-size: var(--font-size-xl); font-weight:600; }
+    #map { width:100%; height: 260px; border-radius:12px; }
+    @media (min-width: 980px){
+      .detail { grid-template-columns: 2fr 1fr; align-items:start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container row">
+      <a class="logo h2" href="./index.html">Sucesso <span class="accent">Flats</span></a>
+      <nav class="nav">
+        <a href="./index.html">Home</a>
+        <a href="./flats.html">Flats</a>
+        <a href="#contato">Contato</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mt-xl">
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <a href="./flats.html">Flats</a> › <span id="bc-current" aria-current="page">Carregando…</span>
+    </nav>
+
+    <section class="detail">
+      <!-- Coluna esquerda -->
+      <div>
+        <div class="gallery">
+          <img id="gallery-main" class="gallery-main" alt="Imagem do flat" />
+          <div id="thumbs" class="thumbs" aria-label="Miniaturas de imagens"></div>
+        </div>
+
+        <div class="panel" style="margin-top: var(--space-lg);">
+          <h2>Descrição</h2>
+          <p id="descricao">—</p>
+          <h2 style="margin-top:16px;">Amenidades</h2>
+          <ul id="amenidades" style="display:flex;flex-wrap:wrap;gap:8px;padding:0;list-style:none;"></ul>
+        </div>
+
+        <div class="panel" style="margin-top: var(--space-lg);">
+          <h2>Localização (provisória)</h2>
+          <div id="map" role="region" aria-label="Mapa de localização"></div>
+          <p class="muted" style="margin-top:8px;">Coordenadas temporárias — serão atualizadas quando definirmos os endereços reais.</p>
+        </div>
+      </div>
+
+      <!-- Coluna direita -->
+      <aside class="panel">
+        <h1 id="nome" class="h2">Carregando…</h1>
+        <p class="price">A partir de R$ <span id="preco">—</span> / noite</p>
+        <p id="ocupacao" class="muted">Ocupação máxima: —</p>
+
+        <a href="#datas" class="btn btn-primary" style="width:100%; text-align:center; margin-top:12px;">Selecionar datas</a>
+        <p class="muted" style="margin-top:8px;">Cancelamento grátis até 48h antes.</p>
+
+        <hr style="margin:16px 0;" />
+        <section id="datas" aria-label="Selecionar datas">
+          <p class="muted">O seletor de datas será implementado no Passo 6.</p>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">© 2025 Sucesso Flats</div>
+  </footer>
+
+  <script src="../utils/env.js"></script>
+  <script src="./flat.js" type="module"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</body>
+</html>

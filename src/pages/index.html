@@ -6,17 +6,17 @@
   <title>Sucesso Flats</title>
 
   <!-- CSS (ordem correta) -->
-  <link rel="stylesheet" href="src/styles/normalize.css" />
-  <link rel="stylesheet" href="src/assets/tokens.css" />
-  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="stylesheet" href="../styles/normalize.css" />
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
 </head>
 <body>
   <header class="site-header reveal">
     <div class="container row">
       <div class="logo h2">Sucesso <span class="accent">Flats</span></div>
       <nav class="nav">
-        <a href="#">Home</a>
-        <a href="#flats">Flats</a>
+        <a href="./index.html" aria-current="page">Home</a>
+        <a href="./flats.html">Flats</a>
         <a href="#contato">Contato</a>
       </nav>
     </div>
@@ -38,59 +38,41 @@
       </div>
     </section>
 
+    <!-- seção mockada só para a Home; a lista oficial ficará em flats.html -->
     <section id="flats" class="section">
       <div class="container">
         <h2 class="h2 reveal">Nossos 4 Flats</h2>
         <div class="cards">
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">A 5 min do aeroporto</div>
+          <!-- Cards estáticos (placeholders) — manter por enquanto -->
+          <article class="card reveal"><div class="card__media">FOTO</div>
+            <div class="card__body"><div class="badge">A 5 min do aeroporto</div>
               <h3 class="card__title">Flat Aeroporto 01</h3>
               <p class="card__meta">1 quarto · Wi-Fi · Ar-condicionado</p>
-              <div class="card__footer">
-                <span class="muted">R$ 189/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
+              <div class="card__footer"><span class="muted">R$ 189/noite</span><a class="btn btn-primary" href="./flats.html">Reservar</a></div>
             </div>
           </article>
 
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Smart Check-in</div>
+          <article class="card reveal"><div class="card__media">FOTO</div>
+            <div class="card__body"><div class="badge">Smart Check-in</div>
               <h3 class="card__title">Flat Aeroporto 02</h3>
               <p class="card__meta">Cozinha completa · Estacionamento</p>
-              <div class="card__footer">
-                <span class="muted">R$ 199/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
+              <div class="card__footer"><span class="muted">R$ 199/noite</span><a class="btn btn-primary" href="./flats.html">Reservar</a></div>
             </div>
           </article>
 
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Studio</div>
+          <article class="card reveal"><div class="card__media">FOTO</div>
+            <div class="card__body"><div class="badge">Studio</div>
               <h3 class="card__title">Flat Aeroporto 03</h3>
               <p class="card__meta">TV · Cama Queen</p>
-              <div class="card__footer">
-                <span class="muted">R$ 179/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
+              <div class="card__footer"><span class="muted">R$ 179/noite</span><a class="btn btn-primary" href="./flats.html">Reservar</a></div>
             </div>
           </article>
 
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Pet friendly</div>
+          <article class="card reveal"><div class="card__media">FOTO</div>
+            <div class="card__body"><div class="badge">Pet friendly</div>
               <h3 class="card__title">Flat Aeroporto 04</h3>
               <p class="card__meta">2 quartos · Varanda</p>
-              <div class="card__footer">
-                <span class="muted">R$ 249/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
+              <div class="card__footer"><span class="muted">R$ 249/noite</span><a class="btn btn-primary" href="./flats.html">Reservar</a></div>
             </div>
           </article>
         </div>
@@ -111,7 +93,6 @@
   </footer>
 
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <!-- animação de reveal -->
-  <script src="src/utils/reveal.js" defer></script>
+  <script src="../utils/reveal.js" defer></script>
 </body>
 </html>

@@ -1,3 +1,34 @@
+-- ========================================
+-- Checklist: extensões, RLS e políticas mínimas
+-- ========================================
+
+create extension if not exists pgcrypto;
+
+alter table flats          enable row level security;
+alter table imagens        enable row level security;
+alter table amenidades     enable row level security;
+alter table flat_amenidade enable row level security;
+
+do $$
+begin
+  if not exists (select 1 from pg_policies where tablename='flats' and policyname='public_read_flats') then
+    create policy "public_read_flats" on flats for select using (true);
+  end if;
+
+  if not exists (select 1 from pg_policies where tablename='imagens' and policyname='public_read_imagens') then
+    create policy "public_read_imagens" on imagens for select using (true);
+  end if;
+
+  if not exists (select 1 from pg_policies where tablename='amenidades' and policyname='public_read_amenidades') then
+    create policy "public_read_amenidades" on amenidades for select using (true);
+  end if;
+
+  if not exists (select 1 from pg_policies where tablename='flat_amenidade' and policyname='public_read_flat_amenidade') then
+    create policy "public_read_flat_amenidade" on flat_amenidade for select using (true);
+  end if;
+end$$;
+
+
 -- CMS mínimo para "Sucesso Flat's"
 create extension if not exists pgcrypto;
 
