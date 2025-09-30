@@ -1,102 +1,177 @@
-const SUPABASE_URL = window.env?.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.env?.SUPABASE_ANON_KEY;
+// src/pages/flat.js
+
+// ====== ENV / HEADERS ======
+const SUPABASE_URL = window.env?.SUPABASE_URL || window.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.env?.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY;
 const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
 
+// ====== PARAMS / DOM HELPERS ======
 const params = new URLSearchParams(location.search);
-const slug = params.get('slug');
-
+const slug = params.get("slug");
 const el = (id) => document.getElementById(id);
 
-async function fetchFlatBySlug(slug) {
-  const url = new URL(`${SUPABASE_URL}/rest/v1/flats`);
-  // selecione apenas colunas existentes/seguras
-  url.searchParams.set('select', 'id,slug,nome,preco_base,imagens(url,ordem,alt),flat_amenidade(amenidades(chave,nome,label))');
-  url.searchParams.set('slug', `eq.${slug}`);
+const fmtBRL = (n) =>
+  Number(n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// ====== LOW-LEVEL REST (com tratamento de erro útil) ======
+async function restGet(pathWithQuery) {
+  const url = new URL(`${SUPABASE_URL}${pathWithQuery}`);
   const res = await fetch(url, { headers });
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('fetchFlatBySlug error:', res.status, body);
-    throw new Error('Falha ao buscar flat');
+    const body = await res.text().catch(() => "");
+    console.error(`[REST ${url.pathname}]`, res.status, body);
+    throw new Error(`Falha na chamada ${url.pathname} (${res.status})`);
   }
-  const data = await res.json();
-  return data[0] || null;
+  return res.json();
 }
 
+// ====== FETCH LAYER (SEM JOINS EMBUTIDOS) ======
+async function fetchFlatBySlug(slug) {
+  const qs = new URLSearchParams();
+  qs.set(
+    "select",
+    "id,slug,titulo,descricao,preco_noite,ocupacao_maxima,cidade,estado,endereco,latitude,longitude,capa_url"
+  );
+  qs.set("slug", `eq.${slug}`);
+  const data = await restGet(`/rest/v1/flats?${qs.toString()}`);
+  return data?.[0] || null;
+}
+
+async function fetchImages(flatId) {
+  const qs = new URLSearchParams();
+  qs.set("select", "id,flat_id,url,ordem");
+  qs.set("flat_id", `eq.${flatId}`);
+  qs.set("order", "ordem.asc");
+  const data = await restGet(`/rest/v1/imagens?${qs.toString()}`);
+  return (data || []).filter((i) => i?.url);
+}
+
+async function fetchAmenities(flatId) {
+  // busca o vínculo e expande apenas o necessário da tabela amenidades
+  const qs = new URLSearchParams();
+  qs.set("select", "id,amenidade_id,amenidades(id,nome,icon)");
+  qs.set("flat_id", `eq.${flatId}`);
+  const data = await restGet(`/rest/v1/flat_amenidade?${qs.toString()}`);
+  return (data || []).map((row) => {
+    const a = row.amenidades || {};
+    return { id: a.id ?? row.amenidade_id ?? row.id, nome: a.nome || "Amenidade", icon: a.icon || null };
+  });
+}
+
+// ====== RENDER ======
 function renderGallery(imgs) {
-  const main = el('gallery-main');
-  const thumbs = el('thumbs');
+  const main = el("gallery-main");
+  const thumbs = el("thumbs");
 
   if (!imgs?.length) {
-    const url = 'https://placehold.co/1200x800?text=SUCESSO+FLATS';
-    main.src = url; main.alt = 'Imagem temporária';
-    thumbs.innerHTML = '';
+    const url = "https://placehold.co/1200x800?text=SUCESSO+FLATS";
+    if (main) {
+      main.src = url;
+      main.alt = "Imagem temporária";
+    }
+    if (thumbs) thumbs.innerHTML = "";
     return;
   }
 
-  const sorted = [...imgs].sort((a,b)=>(a?.ordem??99)-(b?.ordem??99));
-  main.src = sorted[0].url;
-  main.alt = sorted[0].alt || 'Imagem do flat';
-  thumbs.innerHTML = '';
+  const sorted = [...imgs].sort((a, b) => (a?.ordem ?? 99) - (b?.ordem ?? 99));
+  if (main) {
+    main.src = sorted[0].url;
+    main.alt = "Imagem do flat";
+  }
+  if (thumbs) thumbs.innerHTML = "";
 
   sorted.forEach((im, idx) => {
-    const t = document.createElement('img');
+    const t = document.createElement("img");
     t.src = im.url;
-    t.alt = im.alt || `Imagem ${idx+1}`;
-    t.addEventListener('click', () => { main.src = im.url; main.alt = t.alt; });
+    t.alt = `Imagem ${idx + 1}`;
+    t.addEventListener("click", () => {
+      main.src = im.url;
+      main.alt = t.alt;
+    });
     thumbs.appendChild(t);
   });
 }
 
-function renderAmenities(rel) {
-  const list = el('amenidades');
-  list.innerHTML = '';
-  (rel || []).forEach(r => {
-    const label = r?.amenidades?.label || r?.amenidades?.nome || r?.amenidades?.chave || 'Amenidade';
-    const li = document.createElement('li');
-    li.className = 'badge';
-    li.textContent = label;
+function renderAmenities(amenidades) {
+  const list = el("amenidades"); // pode ser <ul> ou <div>
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (!amenidades?.length) {
+    const li = document.createElement("div");
+    li.style.opacity = ".7";
+    li.textContent = "Sem amenidades cadastradas.";
+    list.appendChild(li);
+    return;
+  }
+
+  amenidades.forEach((a) => {
+    const li = document.createElement("li");
+    li.className = "badge";
+    li.textContent = a.icon ? `${a.icon} ${a.nome}` : a.nome;
     list.appendChild(li);
   });
 }
 
 function initMap({ lat, lng }) {
-  // Coordenadas temporárias: Aeroporto de Teresina
+  // Coordenadas temporárias: Aeroporto de Teresina, caso não tenha coords no flat
   const fallback = { lat: -5.0606, lng: -42.8236 };
-  const center = (typeof lat === 'number' && typeof lng === 'number') ? { lat, lng } : fallback;
+  const center =
+    typeof lat === "number" && typeof lng === "number" ? { lat, lng } : fallback;
 
-  const map = L.map('map').setView([center.lat, center.lng], 15);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  const map = L.map("map").setView([center.lat, center.lng], 15);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+  }).addTo(map);
   L.marker([center.lat, center.lng]).addTo(map);
 }
 
+// ====== BOOT ======
 async function init() {
   if (!slug) {
-    alert('Slug não informado. Voltando para a lista de flats.');
-    location.href = './flats.html';
+    // volta para a listagem se não houver slug
+    location.href = "./flats.html";
+    return;
+  }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("SUPABASE_URL/ANON_KEY ausentes no front.");
     return;
   }
 
   try {
+    // 1) flat básico
     const flat = await fetchFlatBySlug(slug);
-    if (!flat) { location.href = './flats.html'; return; }
+    if (!flat) {
+      // não encontrado → volta pra lista
+      location.href = "./flats.html";
+      return;
+    }
 
-    document.title = `${flat.nome} • Sucesso Flats`;
-    el('bc-current').textContent = flat.nome;
-    el('nome').textContent = flat.nome;
+    // 2) relacionamentos em requisições separadas
+    const [images, amenities] = await Promise.all([
+      fetchImages(flat.id),
+      fetchAmenities(flat.id),
+    ]);
 
-    // Campos opcionais (se não existirem ainda, mostra traço)
-    el('descricao').textContent = flat.descricao || '—';
-    el('preco').textContent = Number(flat.preco_base ?? 0).toFixed(2);
-    el('ocupacao').textContent = `Ocupação máxima: ${flat.ocupacao_maxima ?? '—'}`;
+    // 3) render
+    document.title = `${flat.titulo} • Sucesso Flats`;
+    el("bc-current") && (el("bc-current").textContent = flat.titulo);
+    el("nome") && (el("nome").textContent = flat.titulo);
 
-    renderGallery(flat.imagens);
-    renderAmenities(flat.flat_amenidade);
+    el("descricao") && (el("descricao").textContent = flat.descricao || "—");
+    el("preco") && (el("preco").textContent = fmtBRL(flat.preco_noite));
+    el("ocupacao") &&
+      (el("ocupacao").textContent = `Ocupação máxima: ${flat.ocupacao_maxima ?? "—"}`);
 
-    // placeholder de mapa (trocaremos por coords reais depois)
-    initMap({ lat: null, lng: null });
+    renderGallery(images?.length ? images : (flat.capa_url ? [{ url: flat.capa_url, ordem: 0 }] : []));
+    renderAmenities(amenities);
+
+    // 4) mapa (usa lat/lng do banco se tiver, senão fallback)
+    initMap({ lat: flat.latitude ?? null, lng: flat.longitude ?? null });
   } catch (e) {
     console.error(e);
-    alert('Erro ao carregar o flat.');
+    // Mantemos a página carregada (sem alert); se quiser, troque por um card visível na UI
+    // Ex.: document.getElementById('error-box').style.display = 'block';
   }
 }
 

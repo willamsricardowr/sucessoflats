@@ -5,98 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sucesso Flats</title>
 
+  <!-- Google Fonts (tipografia moderna) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
   <!-- CSS (ordem correta) -->
   <link rel="stylesheet" href="src/styles/normalize.css" />
   <link rel="stylesheet" href="src/assets/tokens.css" />
   <link rel="stylesheet" href="src/styles/global.css" />
 </head>
 <body>
+  <!-- Header / Navegação -->
   <header class="site-header reveal">
     <div class="container row">
-      <div class="logo h2">Sucesso <span class="accent">Flats</span></div>
+      <a class="logo h2" href="/"><span>Sucesso</span> <span class="accent">Flats</span></a>
       <nav class="nav">
-        <a href="#">Home</a>
-        <a href="#flats">Flats</a>
-        <a href="#contato">Contato</a>
+        <a href="#flats" class="nav-link">Flats</a>
+        <a href="#contato" class="nav-link">Contato</a>
+        <a href="src/pages/flats.html" class="btn btn-primary btn-sm">Reservar</a>
       </nav>
     </div>
   </header>
 
   <main>
-    <section class="hero">
+    <!-- Hero com imagem de fundo (troque a URL se quiser) -->
+    <section class="hero" style="--hero-bg:url('https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1600&auto=format&fit=crop')">
       <div class="container hero-wrap">
         <div class="stack-md reveal">
-          <span class="kicker">Perto do Aeroporto de Teresina</span>
+          <span class="kicker">✈️ Ao lado do Aeroporto de Teresina</span>
           <h1 class="h1">Flats modernos com check-in flexível e reserva online</h1>
-          <p class="subtitle">Confirmação imediata, Wi-Fi rápido, ar-condicionado e limpeza padrão hotelaria.</p>
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <p class="subtitle">Wi-Fi rápido, ar-condicionado e limpeza padrão hotelaria.</p>
+          <div class="cta-wrap">
             <a class="btn btn-primary" href="#flats">Ver disponibilidade</a>
             <a class="btn btn-outline" href="#contato">Falar no WhatsApp</a>
           </div>
         </div>
-        <div class="hero-art reveal" aria-hidden="true"></div>
       </div>
     </section>
 
+    <!-- Seção dinâmica de flats (preenchida por src/home.js) -->
     <section id="flats" class="section">
       <div class="container">
-        <h2 class="h2 reveal">Nossos 4 Flats</h2>
-        <div class="cards">
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">A 5 min do aeroporto</div>
-              <h3 class="card__title">Flat Aeroporto 01</h3>
-              <p class="card__meta">1 quarto · Wi-Fi · Ar-condicionado</p>
-              <div class="card__footer">
-                <span class="muted">R$ 189/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
-            </div>
-          </article>
+        <h2 class="h2 reveal">Nossos Flats</h2>
 
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Smart Check-in</div>
-              <h3 class="card__title">Flat Aeroporto 02</h3>
-              <p class="card__meta">Cozinha completa · Estacionamento</p>
-              <div class="card__footer">
-                <span class="muted">R$ 199/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
-            </div>
-          </article>
+        <!-- GRID dinâmico (JS vai preencher) -->
+        <div class="cards" id="home-cards"></div>
 
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Studio</div>
-              <h3 class="card__title">Flat Aeroporto 03</h3>
-              <p class="card__meta">TV · Cama Queen</p>
-              <div class="card__footer">
-                <span class="muted">R$ 179/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
-            </div>
-          </article>
-
-          <article class="card reveal">
-            <div class="card__media">FOTO</div>
-            <div class="card__body">
-              <div class="badge">Pet friendly</div>
-              <h3 class="card__title">Flat Aeroporto 04</h3>
-              <p class="card__meta">2 quartos · Varanda</p>
-              <div class="card__footer">
-                <span class="muted">R$ 249/noite</span>
-                <a class="btn btn-primary" href="#">Reservar</a>
-              </div>
-            </div>
-          </article>
+        <div style="margin-top:16px;">
+          <a class="btn btn-outline" href="src/pages/flats.html">Ver todos os flats</a>
         </div>
       </div>
     </section>
 
+    <!-- Contato -->
     <section id="contato" class="section">
       <div class="container stack-md reveal">
         <h2 class="h2">Contato</h2>
@@ -106,12 +68,16 @@
     </section>
   </main>
 
+  <!-- Footer -->
   <footer class="site-footer">
     <div class="container reveal">© <span id="year"></span> Sucesso Flats — Próximo ao Aeroporto de Teresina.</div>
   </footer>
 
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <!-- animação de reveal -->
+
+  <!-- Scripts (ordem importa: env -> home -> reveal) -->
+  <script src="src/utils/env.js"></script>
+  <script type="module" src="src/home.js"></script>
   <script src="src/utils/reveal.js" defer></script>
 </body>
 </html>
