@@ -35,9 +35,9 @@
   <header class="site-header">
     <div class="container row">
       <!-- volta para a Home da raiz -->
-      <a class="logo h2" href="../../index.html">Sucesso <span class="accent">Flats</span></a>
+      <a class="logo h2" href="../index.html">Sucesso <span class="accent">Flats</span></a>
       <nav class="nav">
-        <a href="../../index.html">Home</a>
+        <a href="../index.html">Home</a>
         <a href="./flats.html">Flats</a>
         <a href="#contato">Contato</a>
       </nav>
@@ -82,15 +82,23 @@
           <h2 style="margin:16px 0 8px 0;">Selecionar datas</h2>
           <div id="calendar"></div>
 
-          <div style="display:flex; gap:8px; margin-top:12px;">
-            <input id="checkin" type="text" aria-label="Check-in" placeholder="Check-in (YYYY-MM-DD)" readonly />
-            <input id="checkout" type="text" aria-label="Check-out" placeholder="Check-out (YYYY-MM-DD)" readonly />
+          <div class="datas-inputs">
+            <div class="input-box">
+              <label for="checkin">Entrada <small>(check-in)</small></label>
+              <input id="checkin" type="text" placeholder="Selecionar" readonly />
+            </div>
+            <div class="input-box">
+              <label for="checkout">Saída <small>(check-out)</small></label>
+              <input id="checkout" type="text" placeholder="Selecionar" readonly />
+            </div>
           </div>
 
-          <button id="btn-avancar" class="btn-primary" style="width:100%; margin-top:12px;" disabled>Avançar</button>
+          <button id="btn-avancar" class="btn-primary" disabled>
+            Continuar reserva
+          </button>
 
           <p class="muted" style="margin-top:8px;">
-            As datas ocupadas já aparecem bloqueadas. Na próxima etapa validaremos no backend e seguiremos para o pagamento.
+            As datas ocupadas já aparecem bloqueadas. Escolha o dia que deseja entrar e o dia que vai sair do flat.
           </p>
 
           <hr style="margin:16px 0;" />
@@ -119,18 +127,26 @@
     const busyRanges = getBusyRangesBySlug(slug); // mock temporário
     mountCalendar(document.getElementById('calendar'), {
       busyRanges,
-      onChange: ({checkin, checkout}) => {
+      onChange: ({ checkin, checkout }) => {
         document.getElementById('checkin').value = checkin || '';
         document.getElementById('checkout').value = checkout || '';
-        document.getElementById('btn-avancar').disabled = !(checkin && checkout);
+        const canContinue = Boolean(checkin && checkout);
+        document.getElementById('btn-avancar').disabled = !canContinue;
       }
     });
 
     document.getElementById('btn-avancar').addEventListener('click', () => {
       const ci = document.getElementById('checkin').value;
       const co = document.getElementById('checkout').value;
+
+      if (!(ci && co)) return;
+      if (new Date(co) <= new Date(ci)) {
+        alert('A data de saída deve ser após a data de entrada.');
+        return;
+      }
+
       sessionStorage.setItem('booking', JSON.stringify({ slug, checkin: ci, checkout: co }));
-      alert(`Selecionado:\nCheck-in: ${ci}\nCheck-out: ${co}\n(Avançaremos para o formulário no Passo 7)`);
+      location.href = './reserva.html';
     });
   </script>
 
