@@ -13,7 +13,7 @@ const el = (id) => document.getElementById(id);
 const fmtBRL = (n) =>
   Number(n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// ====== LOW-LEVEL REST (com tratamento de erro útil) ======
+// ====== LOW-LEVEL REST ======
 async function restGet(pathWithQuery) {
   const url = new URL(`${SUPABASE_URL}${pathWithQuery}`);
   const res = await fetch(url, { headers });
@@ -25,7 +25,7 @@ async function restGet(pathWithQuery) {
   return res.json();
 }
 
-// ====== FETCH LAYER (SEM JOINS EMBUTIDOS) ======
+// ====== FETCHES ======
 async function fetchFlatBySlug(slug) {
   const qs = new URLSearchParams();
   qs.set(
@@ -47,7 +47,6 @@ async function fetchImages(flatId) {
 }
 
 async function fetchAmenities(flatId) {
-  // busca o vínculo e expande apenas o necessário da tabela amenidades
   const qs = new URLSearchParams();
   qs.set("select", "id,amenidade_id,amenidades(id,nome,icon)");
   qs.set("flat_id", `eq.${flatId}`);
@@ -93,7 +92,7 @@ function renderGallery(imgs) {
 }
 
 function renderAmenities(amenidades) {
-  const list = el("amenidades"); // pode ser <ul> ou <div>
+  const list = el("amenidades");
   if (!list) return;
   list.innerHTML = "";
 
@@ -114,7 +113,6 @@ function renderAmenities(amenidades) {
 }
 
 function initMap({ lat, lng }) {
-  // Coordenadas temporárias: Aeroporto de Teresina, caso não tenha coords no flat
   const fallback = { lat: -5.0606, lng: -42.8236 };
   const center =
     typeof lat === "number" && typeof lng === "number" ? { lat, lng } : fallback;
@@ -126,10 +124,9 @@ function initMap({ lat, lng }) {
   L.marker([center.lat, center.lng]).addTo(map);
 }
 
-// ====== BOOT ======
+// ====== INIT ======
 async function init() {
   if (!slug) {
-    // volta para a listagem se não houver slug
     location.href = "./flats.html";
     return;
   }
@@ -139,25 +136,20 @@ async function init() {
   }
 
   try {
-    // 1) flat básico
     const flat = await fetchFlatBySlug(slug);
     if (!flat) {
-      // não encontrado → volta pra lista
       location.href = "./flats.html";
       return;
     }
 
-    // 2) relacionamentos em requisições separadas
     const [images, amenities] = await Promise.all([
       fetchImages(flat.id),
       fetchAmenities(flat.id),
     ]);
 
-    // 3) render
     document.title = `${flat.titulo} • Sucesso Flats`;
     el("bc-current") && (el("bc-current").textContent = flat.titulo);
     el("nome") && (el("nome").textContent = flat.titulo);
-
     el("descricao") && (el("descricao").textContent = flat.descricao || "—");
     el("preco") && (el("preco").textContent = fmtBRL(flat.preco_noite));
     el("ocupacao") &&
@@ -166,12 +158,44 @@ async function init() {
     renderGallery(images?.length ? images : (flat.capa_url ? [{ url: flat.capa_url, ordem: 0 }] : []));
     renderAmenities(amenities);
 
-    // 4) mapa (usa lat/lng do banco se tiver, senão fallback)
     initMap({ lat: flat.latitude ?? null, lng: flat.longitude ?? null });
+
+    // ====== NOVO (Passo 6 - Calendário) ======
+    import('../components/calendar.js')
+      .then(({ mountCalendar }) => {
+        import('./availability.mock.js')
+          .then(({ getBusyRangesBySlug }) => {
+            const busyRanges = getBusyRangesBySlug(slug); // mock temporário
+            const calendarEl = document.getElementById("calendar");
+            if (!calendarEl) return;
+
+            mountCalendar(calendarEl, {
+              busyRanges,
+              onChange: ({ checkin, checkout }) => {
+                el("checkin").value = checkin || "";
+                el("checkout").value = checkout || "";
+                el("btn-avancar").disabled = !(checkin && checkout);
+              },
+            });
+
+            el("btn-avancar").addEventListener("click", () => {
+              const ci = el("checkin").value;
+              const co = el("checkout").value;
+              sessionStorage.setItem(
+                "booking",
+                JSON.stringify({ slug, checkin: ci, checkout: co })
+              );
+              alert(
+                `Selecionado:\nCheck-in: ${ci}\nCheck-out: ${co}\n(Avançaremos para o formulário no Passo 7)`
+              );
+            });
+          });
+      })
+      .catch((err) => console.error("Erro ao montar calendário:", err));
+    // ====== FIM DO PASSO 6 ======
+
   } catch (e) {
     console.error(e);
-    // Mantemos a página carregada (sem alert); se quiser, troque por um card visível na UI
-    // Ex.: document.getElementById('error-box').style.display = 'block';
   }
 }
 

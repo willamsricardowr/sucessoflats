@@ -13,6 +13,9 @@
   <!-- Leaflet (mapa) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+  <!-- Calendário (Passo 6) -->
+  <link rel="stylesheet" href="../components/calendar.css" />
+
   <style>
     .breadcrumb { margin: var(--space-md) 0; font-size: 14px; }
     .detail { display:grid; gap: var(--space-lg); grid-template-columns: 1fr; }
@@ -31,9 +34,10 @@
 <body>
   <header class="site-header">
     <div class="container row">
-      <a class="logo h2" href="./index.html">Sucesso <span class="accent">Flats</span></a>
+      <!-- volta para a Home da raiz -->
+      <a class="logo h2" href="../../index.html">Sucesso <span class="accent">Flats</span></a>
       <nav class="nav">
-        <a href="./index.html">Home</a>
+        <a href="../../index.html">Home</a>
         <a href="./flats.html">Flats</a>
         <a href="#contato">Contato</a>
       </nav>
@@ -73,12 +77,24 @@
         <p class="price">A partir de R$ <span id="preco">—</span> / noite</p>
         <p id="ocupacao" class="muted">Ocupação máxima: —</p>
 
-        <a href="#datas" class="btn btn-primary" style="width:100%; text-align:center; margin-top:12px;">Selecionar datas</a>
-        <p class="muted" style="margin-top:8px;">Cancelamento grátis até 48h antes.</p>
-
-        <hr style="margin:16px 0;" />
+        <!-- Calendário de disponibilidade -->
         <section id="datas" aria-label="Selecionar datas">
-          <p class="muted">O seletor de datas será implementado no Passo 6.</p>
+          <h2 style="margin:16px 0 8px 0;">Selecionar datas</h2>
+          <div id="calendar"></div>
+
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <input id="checkin" type="text" aria-label="Check-in" placeholder="Check-in (YYYY-MM-DD)" readonly />
+            <input id="checkout" type="text" aria-label="Check-out" placeholder="Check-out (YYYY-MM-DD)" readonly />
+          </div>
+
+          <button id="btn-avancar" class="btn-primary" style="width:100%; margin-top:12px;" disabled>Avançar</button>
+
+          <p class="muted" style="margin-top:8px;">
+            As datas ocupadas já aparecem bloqueadas. Na próxima etapa validaremos no backend e seguiremos para o pagamento.
+          </p>
+
+          <hr style="margin:16px 0;" />
+          <p class="muted">Cancelamento grátis até 48h antes.</p>
         </section>
       </aside>
     </section>
@@ -88,8 +104,37 @@
     <div class="container">© 2025 Sucesso Flats</div>
   </footer>
 
+  <!-- Scripts -->
   <script src="../utils/env.js"></script>
   <script src="./flat.js" type="module"></script>
+
+  <!-- Calendário (Passo 6) -->
+  <script type="module">
+    import { mountCalendar } from '../components/calendar.js';
+    import { getBusyRangesBySlug } from './availability.mock.js';
+
+    const params = new URLSearchParams(location.search);
+    const slug = params.get('slug');
+
+    const busyRanges = getBusyRangesBySlug(slug); // mock temporário
+    mountCalendar(document.getElementById('calendar'), {
+      busyRanges,
+      onChange: ({checkin, checkout}) => {
+        document.getElementById('checkin').value = checkin || '';
+        document.getElementById('checkout').value = checkout || '';
+        document.getElementById('btn-avancar').disabled = !(checkin && checkout);
+      }
+    });
+
+    document.getElementById('btn-avancar').addEventListener('click', () => {
+      const ci = document.getElementById('checkin').value;
+      const co = document.getElementById('checkout').value;
+      sessionStorage.setItem('booking', JSON.stringify({ slug, checkin: ci, checkout: co }));
+      alert(`Selecionado:\nCheck-in: ${ci}\nCheck-out: ${co}\n(Avançaremos para o formulário no Passo 7)`);
+    });
+  </script>
+
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
