@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reserva • Sucesso Flat’s</title>
+  <link rel="stylesheet" href="../styles/normalize.css"/>
+  <link rel="stylesheet" href="../assets/tokens.css"/>
+  <link rel="stylesheet" href="../styles/global.css"/>
+  <style>
+    .layout { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-md); }
+    .grid-2 { display: grid; gap: var(--space-lg); grid-template-columns: 1fr; }
+    @media (min-width: 980px){ .grid-2 { grid-template-columns: 2fr 1fr; } }
+    .panel { border:1px solid #e5e7eb; border-radius:12px; padding:var(--space-md); background:#fff; }
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    .field input, .field select, .field textarea { padding:10px; border:1px solid #e5e7eb; border-radius:8px; }
+    .error { color:#b91c1c; font-size:12px; min-height: 16px; }
+    .summary { display:flex; flex-direction:column; gap:8px; }
+    .price-row { display:flex; justify-content:space-between; }
+    .muted-sm { color:#6b7280; font-size:12px; }
+    .btn-primary { padding:12px 16px; border-radius:10px; font-weight:800; }
+    .muted { color:#6b7280; }
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <div class="container row">
+ <a class="logo" href="../index.html">Sucesso <span class="accent">Flat’s</span></a>
+    <nav class="nav"><a href="./flats.html">Flats</a></nav>
+  </div>
+</header>
+
+<main class="layout mt-xl grid-2">
+  <!-- Formulário -->
+  <section class="panel" aria-labelledby="title">
+    <h1 id="title">Finalizar reserva</h1>
+    <p class="muted">Preencha seus dados. O pagamento será no passo seguinte.</p>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="nome">Nome completo *</label>
+        <input id="nome" name="nome" autocomplete="name" required />
+        <div class="error" id="err-nome"></div>
+      </div>
+
+      <div class="field">
+        <label for="email">E-mail *</label>
+        <input id="email" name="email" type="email" autocomplete="email" required />
+        <div class="error" id="err-email"></div>
+      </div>
+
+      <div class="field">
+        <label for="telefone">Telefone/WhatsApp *</label>
+        <input id="telefone" name="telefone" inputmode="tel" placeholder="(DD) 9XXXX-XXXX" required />
+        <div class="error" id="err-telefone"></div>
+      </div>
+
+      <div class="field">
+        <label for="hospedes">Nº de hóspedes *</label>
+        <select id="hospedes" name="hospedes" required>
+          <option value="">Selecione…</option>
+          <!-- opções serão preenchidas com base em ocupação_maxima do flat -->
+        </select>
+        <div class="error" id="err-hospedes"></div>
+      </div>
+
+      <div class="field">
+        <label for="hora">Horário estimado de chegada *</label>
+        <input id="hora" name="hora" type="time" required />
+        <div class="error" id="err-hora"></div>
+      </div>
+
+      <div class="field">
+        <label for="obs">Observações (opcional)</label>
+        <textarea id="obs" name="obs" rows="3" placeholder="Ex.: chegada após 22h, preferências, dúvidas…"></textarea>
+      </div>
+
+      <p class="muted-sm">Ao continuar, você concorda com a política de cancelamento:
+        <strong>cancelamento grátis até 48h antes</strong>.
+      </p>
+      <button id="btn-continuar" class="btn-primary" type="submit" disabled>Continuar para pagamento</button>
+      <div id="form-feedback" class="muted-sm" style="margin-top:8px;"></div>
+    </form>
+  </section>
+
+  <!-- Resumo -->
+  <aside class="panel" aria-live="polite">
+    <h2>Resumo</h2>
+    <div class="summary">
+      <div class="price-row"><span>Flat</span><strong id="sum-flat">—</strong></div>
+      <div class="price-row"><span>Check-in</span><strong id="sum-ci">—</strong></div>
+      <div class="price-row"><span>Check-out</span><strong id="sum-co">—</strong></div>
+      <div class="price-row"><span>Noites</span><strong id="sum-noites">—</strong></div>
+      <hr/>
+      <div class="price-row"><span>Preço base (por noite)</span><strong id="sum-preco">—</strong></div>
+      <div class="price-row"><span>Total</span><strong id="sum-total">—</strong></div>
+    </div>
+    <p class="muted-sm">Imagens ilustrativas. Tarifas sujeitas à confirmação no pagamento.</p>
+  </aside>
+</main>
+
+<footer class="site-footer">
+  <div class="container">© 2025 Sucesso Flat’s</div>
+</footer>
+
+<script src="../utils/env.js"></script>
+<script type="module" src="./reserva.js"></script>
+</body>
+</html>
