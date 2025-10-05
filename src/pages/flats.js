@@ -2,6 +2,10 @@
 const SUPABASE_URL = window.env?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.env?.SUPABASE_ANON_KEY;
 
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('SUPABASE_URL/ANON_KEY ausentes em ../utils/env.js');
+}
+
 const grid = document.getElementById('grid');
 const empty = document.getElementById('empty');
 const form = document.getElementById('filters-form');
@@ -14,7 +18,7 @@ const headers = {
 
 async function fetchFlats() {
   const url = new URL(`${SUPABASE_URL}/rest/v1/flats`);
-  // selecione apenas colunas existentes (igual ao curl que funcionou)
+  // ⚠️ usar colunas que existem no seu schema
   url.searchParams.set(
     'select',
     'id,slug,nome,preco_base,imagens(url,ordem),flat_amenidade(amenidades(chave))'
@@ -79,7 +83,8 @@ function render(flats) {
 
 function getStateFromForm() {
   const priceMax = document.getElementById('priceMax')?.value || '';
-  const amenities = Array.from(form.querySelectorAll('input[name="amenidade"]:checked')).map(i => i.value);
+  const amenities = Array.from(form?.querySelectorAll('input[name="amenidade"]:checked') || [])
+    .map(i => i.value);
   return { priceMax, amenities };
 }
 
