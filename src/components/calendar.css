@@ -38,3 +38,48 @@
 .calendar .swatch.busy { background:#f3f4f6; border:1px dashed #9ca3af; }
 .calendar .swatch.select { background: var(--color-gold, #AE8648); }
 .calendar .swatch.range { background: #fde68a; border:1px solid #fcd34d; }
+/* Seção de datas refinada */
+#datas {
+  margin-top: 12px;
+}
+
+#datas label {
+  font-size: 13px;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 4px;
+}
+
+#datas input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  cursor: default;
+}
+
+#datas input[readonly] {
+  background: #f9fafb;
+}
+
+.datas-inputs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.input-box {
+  flex: 1;
+  min-width: 130px;
+}
+
+/* Mobile: empilha os campos */
+@media (max-width: 480px) {
+  .datas-inputs {
+    flex-direction: column;
+  }
+}
