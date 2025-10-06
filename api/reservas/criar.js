@@ -61,11 +61,10 @@ export default async function handler(req, res) {
     }
 
     // 1) Buscar possíveis conflitos do mesmo flat
-    // Buscamos pendentes/confirmadas/pagas e filtramos overlap em código
     const listUrl = new URL(`${SUPABASE_URL}/rest/v1/reservas`);
     listUrl.searchParams.set('select', 'id,checkin,checkout,status,hospede_email,expira_em,created_at');
     listUrl.searchParams.set('flat_id', `eq.${flat_id}`);
-    // Se sua tabela usar outros nomes de status, inclua aqui:
+    // Inclua aqui todos os status que bloqueiam
     listUrl.searchParams.set('status', 'in.(pendente,confirmada,pago)');
     const r = await fetch(listUrl, { headers: sHeaders });
     if (!r.ok) {
@@ -76,32 +75,28 @@ export default async function handler(req, res) {
 
     const now = new Date(nowISO());
 
-    // Função de overlap: [checkin, checkout)
+    // Overlap: [checkin, checkout)
     const overlap = (Aci, Aco, Bci, Bco) => (Aci < Bco) && (Aco > Bci);
 
-    // 2) Filtrar apenas as que de fato bloqueiam
-    // - 'confirmada' e 'pago' SEMPRE bloqueiam
-    // - 'pendente' só bloqueia se NÃO estiver expirada (expira_em > agora) ou se não tiver expira_em
+    // 2) Filtrar bloqueios reais
     const blockers = existing.filter(rx => {
       const Aci = new Date(`${rx.checkin}T00:00:00Z`);
       const Aco = new Date(`${rx.checkout}T00:00:00Z`);
       const status = String(rx.status || '').toLowerCase();
-
       const isOverlap = overlap(Aci, Aco, ci, co);
       if (!isOverlap) return false;
 
       if (status === 'confirmada' || status === 'pago') return true;
 
       if (status === 'pendente') {
-        if (!rx.expira_em) return true; // sem expiração definida => ainda bloqueia
+        if (!rx.expira_em) return true; // conservador para antigas
         const exp = new Date(rx.expira_em);
-        return exp > now; // só bloqueia se não expirou
+        return exp > now; // só bloqueia se ainda válida
       }
-
       return false;
     });
 
-    // 3) Se há bloqueio, ver se dá pra REAPROVEITAR reserva pendente do mesmo e-mail
+    // 3) Se houver bloqueio, tentar reaproveitar pendente do mesmo e-mail
     if (blockers.length) {
       const samePersonPending = blockers.find(rx =>
         String(rx.status).toLowerCase() === 'pendente' &&
@@ -124,16 +119,14 @@ export default async function handler(req, res) {
         });
       }
 
-      // Outro hóspede ou já confirmada/paga → bloquear
       return res.status(409).json({ error: 'Conflito de datas', code: 'DATE_CONFLICT' });
     }
 
-    // 4) Inserir pendente nova (com expiração de 30 minutos)
+    // 4) Inserir pendente nova (SEM colunas que não existem na tabela)
     const insertUrl = new URL(`${SUPABASE_URL}/rest/v1/reservas`);
     const body = {
       flat_id,
       flat_slug,
-      flat_nome,
       checkin: ciStr,
       checkout: coStr,
       noites: Number(noites),
@@ -160,7 +153,7 @@ export default async function handler(req, res) {
     }
     const [created] = await ins.json();
 
-    // 5) (Opcional) Enviar e-mail (se tiver RESEND_API_KEY)
+    // 5) (Opcional) Enviar e-mail
     let emailStatus = 'skipped';
     if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
       try {
