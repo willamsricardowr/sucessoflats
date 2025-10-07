@@ -191,6 +191,45 @@ if (!booking?.slug || !booking?.checkin || !booking?.checkout) {
       }
       sessionStorage.setItem('reserva', JSON.stringify(data.reserva));
       alert('Reserva pendente criada! Vamos ao pagamento no próximo passo.');
+      // Depois de criar a reserva com sucesso (data.reserva existe)
+const reservaCriada = data.reserva;
+
+// Monte o objeto completo para o pagamento:
+const reservaParaPagamento = {
+  id: reservaCriada.id,
+  total: Number(reservaCriada.total),
+  flat_nome: form.dataset.flatNome || resumo?.flat_nome || 'Reserva Sucesso Flats',
+  hospede_nome: form.nome.value,
+  hospede_email: form.email.value,
+  flat_id: form.dataset.flatId || reservaCriada.flat_id,
+  checkin: form.checkin.value,
+  checkout: form.checkout.value
+};
+
+// Salva para reuso (opcional)
+sessionStorage.setItem('reserva', JSON.stringify(reservaParaPagamento));
+
+// Chama o endpoint de criação de preferência do Mercado Pago
+fetch('/api/pagamentos/criar', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ reserva: reservaParaPagamento })
+})
+.then(async (r) => {
+  const resp = await r.json();
+  if (!r.ok || !resp.init_point) {
+    console.error('Erro ao iniciar pagamento:', resp);
+    alert('Erro ao iniciar pagamento. Tente novamente em instantes.');
+    return;
+  }
+  // Redireciona ao checkout
+  window.location.href = resp.init_point;
+})
+.catch((e) => {
+  console.error(e);
+  alert('Erro de rede ao conectar com Mercado Pago.');
+});
+
       // location.href = './pagamento.html'; // Passo 9
     } catch (e) {
       console.error('NETWORK ERROR', e);
