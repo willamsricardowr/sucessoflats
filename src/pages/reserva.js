@@ -1,11 +1,38 @@
 // src/pages/reserva.js
 // Passo 7 — Formulário de reserva (client)
 
-// ===== Utils =====
+/* ========= UI helpers (overlay + toast) ========= */
+function showOverlay(msg='Processando...') {
+  let el = document.getElementById('overlay-loading');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'overlay-loading';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;color:#fff;font:600 16px/1.2 system-ui';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'flex';
+}
+function hideOverlay(){ const el=document.getElementById('overlay-loading'); if(el) el.style.display='none'; }
+function showToast(msg, type='error'){
+  let b = document.getElementById('toast-banner');
+  if(!b){
+    b = document.createElement('div');
+    b.id='toast-banner';
+    b.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:10px;color:#fff;z-index:10000;max-width:min(92vw,680px);box-shadow:0 6px 20px rgba(0,0,0,.2)';
+    document.body.appendChild(b);
+  }
+  b.style.background = type==='error' ? '#ef4444' : '#10b981';
+  b.textContent = msg;
+  b.style.display='block';
+  clearTimeout(b._t);
+  b._t = setTimeout(()=>{ b.style.display='none'; }, 4500);
+}
+
+/* ========= Utils ========= */
 function safeParse(json) {
   try { return JSON.parse(json || "null"); } catch { return null; }
 }
-
 const fmtCurrency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDateBR = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" });
@@ -75,12 +102,12 @@ function attachLiveValidation() {
   tel.addEventListener("input", () => { tel.value = maskPhoneBR(tel.value); });
 }
 
-// ===== Supabase REST env (usado só para resumo) =====
+/* ========= Supabase REST env (usado só para resumo) ========= */
 const SUPABASE_URL = window.env?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.env?.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  alert("Configuração inválida do Supabase. Verifique SUPABASE_URL e SUPABASE_ANON_KEY.");
+  showToast("Configuração inválida do Supabase. Verifique SUPABASE_URL e SUPABASE_ANON_KEY.", 'error');
   throw new Error("Missing Supabase env.");
 }
 
@@ -96,10 +123,10 @@ async function fetchFlatBySlug(slug) {
   return data?.[0] || null;
 }
 
-// ===== Init =====
+/* ========= Init ========= */
 const booking = safeParse(sessionStorage.getItem("booking"));
 if (!booking?.slug || !booking?.checkin || !booking?.checkout) {
-  alert("Selecione as datas na página do flat antes de reservar.");
+  showToast("Selecione as datas na página do flat antes de reservar.", 'error');
   location.href = "./flats.html";
 }
 
@@ -107,7 +134,7 @@ if (!booking?.slug || !booking?.checkin || !booking?.checkout) {
   // 1) Período
   const nights = nightsBetween(booking.checkin, booking.checkout);
   if (!(nights >= 1)) {
-    alert("Período inválido. Selecione as datas novamente.");
+    showToast("Período inválido. Selecione as datas novamente.", 'error');
     location.href = "./flats.html";
     return;
   }
@@ -120,7 +147,7 @@ if (!booking?.slug || !booking?.checkin || !booking?.checkout) {
     console.error("fetchFlatBySlug error", e);
   }
   if (!flat) {
-    alert("Flat não encontrado.");
+    showToast("Flat não encontrado.", 'error');
     location.href = "./flats.html";
     return;
   }
@@ -168,72 +195,76 @@ if (!booking?.slug || !booking?.checkin || !booking?.checkout) {
     };
 
     sessionStorage.setItem("checkoutPayload", JSON.stringify(payload));
-    document.getElementById("form-feedback").textContent =
-      "Dados validados! No próximo passo enviaremos sua reserva para confirmação.";
+    const fb = document.getElementById("form-feedback");
+    if (fb) fb.textContent = "Validando e criando sua reserva…";
 
-    // Envio ao backend
     try {
       btn.disabled = true;
+      showOverlay('Criando sua reserva…');
+
+      // 1) cria a reserva pendente
       const r = await fetch('/api/reservas/criar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: sessionStorage.getItem('checkoutPayload')
       });
       const data = await r.json().catch(() => ({}));
+
       if (!r.ok) {
+        hideOverlay();
         if (r.status === 409) {
-          alert('Ops! As datas escolhidas acabaram de ficar indisponíveis. Tente outro período.');
+          showToast('Ops! As datas escolhidas ficaram indisponíveis. Tente outro período.', 'error');
         } else {
           console.error('API ERROR', r.status, data);
-          alert('Não foi possível criar sua reserva. Tente novamente.');
+          showToast('Não foi possível criar sua reserva. Tente novamente.', 'error');
         }
         return;
       }
-      sessionStorage.setItem('reserva', JSON.stringify(data.reserva));
-      alert('Reserva pendente criada! Vamos ao pagamento no próximo passo.');
-      // Depois de criar a reserva com sucesso (data.reserva existe)
-const reservaCriada = data.reserva;
 
-// Monte o objeto completo para o pagamento:
-const reservaParaPagamento = {
-  id: reservaCriada.id,
-  total: Number(reservaCriada.total),
-  flat_nome: form.dataset.flatNome || resumo?.flat_nome || 'Reserva Sucesso Flats',
-  hospede_nome: form.nome.value,
-  hospede_email: form.email.value,
-  flat_id: form.dataset.flatId || reservaCriada.flat_id,
-  checkin: form.checkin.value,
-  checkout: form.checkout.value
-};
+      // reserva criada ou reutilizada
+      const reservaCriada = data.reserva;
+      sessionStorage.setItem('reserva', JSON.stringify(reservaCriada));
 
-// Salva para reuso (opcional)
-sessionStorage.setItem('reserva', JSON.stringify(reservaParaPagamento));
+      // 2) chama o Mercado Pago
+      showOverlay('Gerando link de pagamento…');
 
-// Chama o endpoint de criação de preferência do Mercado Pago
-fetch('/api/pagamentos/criar', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ reserva: reservaParaPagamento })
-})
-.then(async (r) => {
-  const resp = await r.json();
-  if (!r.ok || !resp.init_point) {
-    console.error('Erro ao iniciar pagamento:', resp);
-    alert('Erro ao iniciar pagamento. Tente novamente em instantes.');
-    return;
-  }
-  // Redireciona ao checkout
-  window.location.href = resp.init_point;
-})
-.catch((e) => {
-  console.error(e);
-  alert('Erro de rede ao conectar com Mercado Pago.');
-});
+      const reservaParaPagamento = {
+        id: reservaCriada.id,
+        total: Number(reservaCriada.total),
+        flat_nome: flat.nome,
+        hospede_nome: payload.hospede.nome,
+        hospede_email: payload.hospede.email,
+        flat_id: flat.id,
+        checkin: booking.checkin,
+        checkout: booking.checkout
+      };
 
-      // location.href = './pagamento.html'; // Passo 9
+      // salva para reuso (opcional)
+      sessionStorage.setItem('reserva', JSON.stringify(reservaParaPagamento));
+
+      const payResp = await fetch('/api/pagamentos/criar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reserva: reservaParaPagamento })
+      });
+      let payJson = {};
+      try { payJson = await payResp.json(); } catch { payJson = {}; }
+
+      hideOverlay();
+
+      if (!payResp.ok || !payJson?.init_point) {
+        console.error('Erro ao iniciar pagamento:', payJson);
+        showToast('Não foi possível iniciar o pagamento agora. Tente novamente em instantes.', 'error');
+        return;
+      }
+
+      // 3) redireciona ao checkout
+      window.location.assign(payJson.init_point);
+
     } catch (e) {
+      hideOverlay();
       console.error('NETWORK ERROR', e);
-      alert('Falha de rede. Tente novamente.');
+      showToast('Falha de rede. Tente novamente.', 'error');
     } finally {
       btn.disabled = false;
     }
