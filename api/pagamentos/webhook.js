@@ -177,6 +177,82 @@ export default async function handler(req, res) {
     // 3) Atualizar status = confirmada (idempotente — PATCH repetido não quebra)
     await updateReservaStatusConfirmada(reservaId, SUPABASE_SERVICE_KEY, SUPABASE_URL);
 
+    // === E-mail de confirmação com .ics ===  (logo após o PATCH)
+    try {
+      const { buildICS } = await import('../_lib/ics.js');
+      const { sendMail } = await import('../_lib/email.js');
+
+      const startISO = `${reserva.checkin}T14:00:00-03:00`; // Check-in 14:00
+      const endISO   = `${reserva.checkout}T12:00:00-03:00`; // Check-out 12:00
+
+      const ics = buildICS({
+        summary: `Estadia — Sucesso Flat’s (${reserva.flat_slug})`,
+        description: [
+          `Reserva CONFIRMADA ✅`,
+          `Hóspede: ${reserva.hospede_nome}`,
+          `Período: ${reserva.checkin} → ${reserva.checkout}`,
+          `Check-in: 14:00 • Check-out: 12:00`,
+          `Total: R$ ${Number(reserva.total).toFixed(2)}`,
+          ``,
+          `Instruções de check-in:`,
+          `• Apresente documento com foto;`,
+          `• Silêncio após 22h;`,
+          `• Proibido fumar no interior.`,
+          ``,
+          `Política: Cancelamento grátis até 48h antes.`,
+          `Sucesso Flat’s`
+        ].join('\n'),
+        startISO,
+        endISO,
+        uid: `reserva-${reserva.id}@sucessoflats`
+      });
+
+      const html = `
+        <p>Olá, <strong>${reserva.hospede_nome}</strong>!</p>
+        <p>Sua reserva foi <strong>confirmada</strong> 🎉</p>
+        <ul>
+          <li><b>Flat:</b> ${reserva.flat_slug}</li>
+          <li><b>Período:</b> ${reserva.checkin} → ${reserva.checkout}</li>
+          <li><b>Check-in:</b> 14:00 &nbsp; • &nbsp; <b>Check-out:</b> 12:00</li>
+          <li><b>Total:</b> R$ ${Number(reserva.total).toFixed(2)}</li>
+        </ul>
+        <p><b>Instruções de check-in</b>:</p>
+        <ul>
+          <li>Apresente documento com foto na chegada;</li>
+          <li>Respeite o silêncio após 22h;</li>
+          <li>Ambiente 100% não fumante.</li>
+        </ul>
+        <p>Adicione ao seu calendário com o anexo <code>sucessoflats.ics</code>.</p>
+        <p>Qualquer dúvida, responda este e-mail.</p>
+        <p>— Sucesso Flat’s</p>
+      `;
+
+      await sendMail({
+        to: reserva.hospede_email,
+        subject: `Reserva confirmada — ${reserva.checkin} → ${reserva.checkout}`,
+        text: [
+          `Sua reserva foi confirmada.`,
+          `Flat: ${reserva.flat_slug}`,
+          `Período: ${reserva.checkin} → ${reserva.checkout}`,
+          `Check-in 14:00 • Check-out 12:00`,
+          `Total: R$ ${Number(reserva.total).toFixed(2)}`,
+          ``,
+          `Anexamos um arquivo .ics para adicionar ao seu calendário.`,
+          `Sucesso Flat’s`
+        ].join('\n'),
+        html,
+        attachments: [{
+          filename: 'sucessoflats.ics',
+          content: Buffer.from(ics).toString('base64'),
+          type: 'text/calendar',
+          disposition: 'attachment'
+        }]
+      });
+    } catch (e) {
+      // Não bloquear o fluxo principal por falha de e-mail
+      console.error('Falha ao enviar e-mail de confirmação:', e);
+    }
+
     // 4) Bloquear no Calendar (se configurado)
     const mapBySlug = {
       'flat-1': process.env.GCALE_FLAT1_ID,
