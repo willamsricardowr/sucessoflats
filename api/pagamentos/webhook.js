@@ -124,15 +124,11 @@ async function updateReservaStatusConfirmada(id, serviceKey, url) {
   if (!r.ok) throw new Error(`Falha ao atualizar reserva: ${await r.text()}`);
 }
 
+/** ========= HANDLER ========= */
 export default async function handler(req, res) {
   try {
-    // (Opcional) Gate simples por header
-    if (process.env.MP_WEBHOOK_SECRET) {
-      const token = req.headers['x-mp-signature'];
-      if (!token || token !== process.env.MP_WEBHOOK_SECRET) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-    }
+    // 🔎 Log leve para auditoria no deploy (não contém segredos)
+    console.log('[MP Webhook] headers:x-forwarded-for=', req.headers['x-forwarded-for'], 'method=', req.method);
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -146,25 +142,30 @@ export default async function handler(req, res) {
 
     // O MP envia JSON. Se vier string, tenta parsear.
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    const { type, data } = body;
+    // O MP pode mandar "type", "topic" ou "action" (ex: "payment.updated")
+    const typeRaw = body?.type || body?.topic || body?.action || '';
+    const type = typeof typeRaw === 'string' ? typeRaw.split('.')[0] : typeRaw;
+    const dataId = body?.data?.id || body?.resource || body?.id;
 
     let reservaId = null;
     let pago = false;
 
     // 1) Descobrir status e external_reference
-    if (type === 'payment' && data?.id) {
-      const pay = await getPaymentById(data.id, MP_ACCESS_TOKEN);
+    if (type === 'payment' && dataId) {
+      const pay = await getPaymentById(dataId, MP_ACCESS_TOKEN);
       pago = pay.status === 'approved';
       reservaId = pay.external_reference || pay.order?.external_reference || null;
-    } else if (type === 'merchant_order' && data?.id) {
-      const mo = await getMerchantOrderById(data.id, MP_ACCESS_TOKEN);
+      console.log('[MP Webhook] payment id=', dataId, 'status=', pay.status, 'external_reference=', reservaId);
+    } else if (type === 'merchant_order' && dataId) {
+      const mo = await getMerchantOrderById(dataId, MP_ACCESS_TOKEN);
       const paid = (mo.payments || []).filter(p => p.status === 'approved')
                       .reduce((s,p)=>s + (p.transaction_amount||0), 0);
       pago = paid >= (mo.total_amount || 0);
       reservaId = mo.external_reference || null;
+      console.log('[MP Webhook] merchant_order id=', dataId, 'paid=', paid, 'total=', mo.total_amount, 'external_reference=', reservaId);
     } else {
       // Outros tipos ignoramos em silêncio
-      return res.status(200).json({ ok: true, skipped: true });
+      return res.status(200).json({ ok: true, skipped: 'unknown_type' });
     }
 
     if (!reservaId) return res.status(200).json({ ok: true, skipped: 'missing_external_reference' });
@@ -177,7 +178,7 @@ export default async function handler(req, res) {
     // 3) Atualizar status = confirmada (idempotente — PATCH repetido não quebra)
     await updateReservaStatusConfirmada(reservaId, SUPABASE_SERVICE_KEY, SUPABASE_URL);
 
-    // === E-mail de confirmação com .ics ===  (logo após o PATCH)
+    // === 3.1 E-mail de confirmação com .ics ===  (logo após o PATCH)
     try {
       const { buildICS } = await import('../_lib/ics.js');
       const { sendMail } = await import('../_lib/email.js');
@@ -197,7 +198,6 @@ export default async function handler(req, res) {
           `Instruções de check-in:`,
           `• Apresente documento com foto;`,
           `• Silêncio após 22h;`,
-          `• Proibido fumar no interior.`,
           ``,
           `Política: Cancelamento grátis até 48h antes.`,
           `Sucesso Flat’s`
@@ -207,39 +207,51 @@ export default async function handler(req, res) {
         uid: `reserva-${reserva.id}@sucessoflats`
       });
 
-      const html = `
-        <p>Olá, <strong>${reserva.hospede_nome}</strong>!</p>
-        <p>Sua reserva foi <strong>confirmada</strong> 🎉</p>
-        <ul>
-          <li><b>Flat:</b> ${reserva.flat_slug}</li>
-          <li><b>Período:</b> ${reserva.checkin} → ${reserva.checkout}</li>
-          <li><b>Check-in:</b> 14:00 &nbsp; • &nbsp; <b>Check-out:</b> 12:00</li>
-          <li><b>Total:</b> R$ ${Number(reserva.total).toFixed(2)}</li>
-        </ul>
-        <p><b>Instruções de check-in</b>:</p>
-        <ul>
-          <li>Apresente documento com foto na chegada;</li>
-          <li>Respeite o silêncio após 22h;</li>
-          <li>Ambiente 100% não fumante.</li>
-        </ul>
-        <p>Adicione ao seu calendário com o anexo <code>sucessoflats.ics</code>.</p>
-        <p>Qualquer dúvida, responda este e-mail.</p>
-        <p>— Sucesso Flat’s</p>
-      `;
-
-      await sendMail({
-        to: reserva.hospede_email,
-        subject: `Reserva confirmada — ${reserva.checkin} → ${reserva.checkout}`,
-        text: [
+      // Se o template avançado existir, usa; senão, usa fallback simples
+      let html, text;
+      try {
+        const { buildHtml, buildText } = await import('../_lib/templates/confirmacao.js');
+        html = buildHtml(reserva, {
+          logoUrl: 'https://sucessoflats.vercel.app/public/logo-sucesso.png',
+          site: 'https://sucessoflats.vercel.app',
+          supportEmail: 'sucessoflats@gmail.com',
+          whatsapp: '+55 86 9 8175-0070',
+          address: 'Teresina/PI',
+          primary: '#C9A44A',
+          accent:  '#B87333',
+          text:    '#0F172A',
+          subtle:  '#64748B',
+          bg:      '#F7F7F9',
+          card:    '#FFFFFF',
+          border:  '#E5E7EB'
+        });
+        text = buildText(reserva, { supportEmail: 'sucessoflats@gmail.com', whatsapp: '+55 86 9 8175-0070', address: 'Teresina/PI' });
+      } catch {
+        html = `
+          <p>Olá, <strong>${reserva.hospede_nome}</strong>!</p>
+          <p>Sua reserva foi <strong>confirmada</strong> 🎉</p>
+          <ul>
+            <li><b>Flat:</b> ${reserva.flat_slug}</li>
+            <li><b>Período:</b> ${reserva.checkin} → ${reserva.checkout}</li>
+            <li><b>Check-in:</b> 14:00 &nbsp; • &nbsp; <b>Check-out:</b> 12:00</li>
+            <li><b>Total:</b> R$ ${Number(reserva.total).toFixed(2)}</li>
+          </ul>
+          <p>Adicione ao seu calendário com o anexo <code>sucessoflats.ics</code>.</p>
+          <p>— Sucesso Flat’s</p>
+        `;
+        text = [
           `Sua reserva foi confirmada.`,
           `Flat: ${reserva.flat_slug}`,
           `Período: ${reserva.checkin} → ${reserva.checkout}`,
           `Check-in 14:00 • Check-out 12:00`,
-          `Total: R$ ${Number(reserva.total).toFixed(2)}`,
-          ``,
-          `Anexamos um arquivo .ics para adicionar ao seu calendário.`,
-          `Sucesso Flat’s`
-        ].join('\n'),
+          `Total: R$ ${Number(reserva.total).toFixed(2)}`
+        ].join('\n');
+      }
+
+      await sendMail({
+        to: reserva.hospede_email,
+        subject: `Reserva confirmada — ${reserva.checkin} → ${reserva.checkout}`,
+        text,
         html,
         attachments: [{
           filename: 'sucessoflats.ics',
@@ -248,6 +260,8 @@ export default async function handler(req, res) {
           disposition: 'attachment'
         }]
       });
+
+      console.log('[MP Webhook] e-mail enviado para', reserva.hospede_email);
     } catch (e) {
       // Não bloquear o fluxo principal por falha de e-mail
       console.error('Falha ao enviar e-mail de confirmação:', e);
@@ -278,10 +292,13 @@ export default async function handler(req, res) {
         reservaId,
         accessToken
       });
+
+      console.log('[MP Webhook] calendário bloqueado para', reserva.flat_slug, startISO, '→', endISO);
     }
 
     return res.status(200).json({ ok: true, reservaId, status: 'confirmada' });
   } catch (e) {
+    console.error('[MP Webhook] erro geral:', e);
     return res.status(500).json({ error: 'Erro webhook', detail: String(e?.message || e) });
   }
 }
