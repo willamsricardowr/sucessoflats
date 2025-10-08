@@ -165,7 +165,8 @@ export function buildHtml(reserva, brand = {}) {
             <!-- CTA -->
             <tr>
               <td style="padding:6px 24px 20px 24px;">
-                <a href="${b.site}/minha-reserva/${reserva.id}" class="btn">Ver minha reserva</a>
+                <!-- Link ajustado para página estática -->
+                <a href="${b.site}/public/minha-reserva.html?id=${reserva.id}" class="btn">Ver minha reserva</a>
                 <div style="height:12px;"></div>
                 <p class="muted" style="font-size:12px; margin:0;">
                   Para adicionar ao seu calendário, use o anexo <code>sucessoflats.ics</code>.
