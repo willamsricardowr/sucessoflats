@@ -1,128 +1,159 @@
 // api/pagamentos/criar.js
 
 export default async function handler(req, res) {
-  // 0) Opcional: libera preflight se um dia chamar de outro domínio
+  // 0️⃣ — Permitir apenas POST e CORS
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(204).end();
   }
-
-  // 1) Permitir apenas POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 2) Variáveis de ambiente
+  // 1️⃣ — Variáveis de ambiente obrigatórias
   const {
     MP_ACCESS_TOKEN,
     MP_BACK_URL_SUCCESS,
     MP_BACK_URL_FAILURE,
     MP_BACK_URL_PENDING,
-    APP_BASE_URL,              // opcional: ex. https://sucessoflats.com.br
+    APP_BASE_URL,
+    SUPABASE_URL,
+    SUPABASE_SERVICE_KEY
   } = process.env;
 
-  if (!MP_ACCESS_TOKEN) {
-    return res.status(500).json({ error: 'MP_ACCESS_TOKEN ausente no backend' });
+  if (!MP_ACCESS_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    return res.status(500).json({ error: 'Variáveis de ambiente ausentes (MP ou Supabase)' });
   }
 
-  // Descobrir domínio base automaticamente se precisar (ex.: sucessoflats.vercel.app)
+  // 2️⃣ — Domínio base (para back_urls e webhook)
   const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
   const base = APP_BASE_URL || vercelUrl;
 
-  // Fallbacks seguros para as back_urls
-  const successURL = MP_BACK_URL_SUCCESS || (base ? `${base}/src/pages/sucesso.html` : undefined);
-  const failureURL = MP_BACK_URL_FAILURE || (base ? `${base}/src/pages/erro.html` : undefined);
-  const pendingURL = MP_BACK_URL_PENDING || (base ? `${base}/src/pages/pendente.html` : undefined);
+  const successURL = MP_BACK_URL_SUCCESS || `${base}/src/pages/sucesso.html`;
+  const failureURL = MP_BACK_URL_FAILURE || `${base}/src/pages/erro.html`;
+  const pendingURL = MP_BACK_URL_PENDING || `${base}/src/pages/pendente.html`;
 
   try {
-    // 3) Payload do front
+    // 3️⃣ — Payload recebido do front
     const payload = req.body;
+    const { flat_id, flat_nome, checkin, checkout, total, hospede_nome, hospede_email } = payload || {};
 
-    // Checagens mínimas
-    const reserva = payload?.reserva || {};
-    const { id, total, flat_nome, hospede_nome, hospede_email, flat_id, checkin, checkout } = reserva || {};
-
-    if (!id || total == null || !flat_nome) {
-      return res.status(400).json({ error: 'Payload inválido: id, total e flat_nome são obrigatórios.' });
+    if (!flat_id || !flat_nome || !checkin || !checkout || !total || !hospede_nome || !hospede_email) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes no corpo da requisição.' });
     }
 
-    // Normalizar valor
-    let valor = Number(total);
-    if (!Number.isFinite(valor)) {
-      return res.status(400).json({ error: 'Valor total inválido.' });
+    // 4️⃣ — HEADERS padrão Supabase
+    const headers = {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json'
+    };
+
+    // 5️⃣ — Verifica se já há reserva no mesmo período (controle de concorrência)
+    const overlapUrl = new URL(`${SUPABASE_URL}/rest/v1/reservas`);
+    overlapUrl.searchParams.set('select', 'id');
+    overlapUrl.searchParams.set('flat_id', `eq.${flat_id}`);
+    overlapUrl.searchParams.set('status', 'in.(pendente,confirmada)');
+    overlapUrl.searchParams.set('or', `(checkin.lte.${checkout},checkout.gte.${checkin})`);
+
+    const overlapRes = await fetch(overlapUrl, { headers });
+    const overlap = await overlapRes.json();
+    if (overlap.length > 0) {
+      return res.status(409).json({ error: 'Período indisponível para este flat.' });
     }
-    // arredonda para 2 casas e garante mínimo de 1 centavo
-    valor = Math.max(0.01, Math.round(valor * 100) / 100);
 
-    // Descrição amigável (se tiver datas)
-    const descricao =
-      checkin && checkout
-        ? `Reserva — ${flat_nome} • ${checkin} → ${checkout}`
-        : `Reserva — ${flat_nome}`;
+    // 6️⃣ — Cria a reserva no Supabase com status pendente
+    const reservaRes = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        flat_id,
+        flat_nome,
+        checkin,
+        checkout,
+        total,
+        hospede_nome,
+        hospede_email,
+        status: 'pendente'
+      })
+    });
 
-    // 4) Montar a preferência do MP
-    const body = {
+    if (!reservaRes.ok) {
+      const detail = await reservaRes.text();
+      return res.status(500).json({ error: 'Falha ao criar reserva no Supabase', detail });
+    }
+
+    const reservaData = await reservaRes.json();
+    const reserva = reservaData[0];
+
+    if (!reserva?.id) {
+      return res.status(500).json({ error: 'Erro ao obter ID da reserva criada.' });
+    }
+
+    // 7️⃣ — Cria a preferência de pagamento no Mercado Pago
+    const descricao = `Reserva — ${flat_nome} • ${checkin} → ${checkout}`;
+    const valor = Math.max(0.01, Math.round(Number(total) * 100) / 100);
+
+    const mpBody = {
       items: [
         {
           title: descricao,
           quantity: 1,
           unit_price: valor,
-          currency_id: 'BRL',
-        },
+          currency_id: 'BRL'
+        }
       ],
       payer: {
-        name: hospede_nome || '',
-        email: hospede_email || '',
+        name: hospede_nome,
+        email: hospede_email
       },
       back_urls: {
         success: successURL,
         failure: failureURL,
-        pending: pendingURL,
+        pending: pendingURL
       },
       auto_return: 'approved',
-      external_reference: id, // importante para conciliação
+      external_reference: reserva.id, // vínculo direto
       payment_methods: {
-        excluded_payment_types: [], // Mantém PIX e Cartão habilitados
-        installments: 1,            // à vista; se quiser permitir parcelas, altere aqui
+        excluded_payment_types: [],
+        installments: 1
       },
-      // Metadados úteis para consulta futura
       metadata: {
-        reserva_id: id,
-        flat_id: flat_id || null,
-        checkin: checkin || null,
-        checkout: checkout || null,
+        reserva_id: reserva.id,
+        flat_id,
+        checkin,
+        checkout
       },
-      // Para o Passo 10 (webhook). Se não existir base, não envia.
-      ...(base && {
-        notification_url: `${base}/api/pagamentos/webhook`,
-      }),
+      notification_url: `${base}/api/pagamentos/webhook`
     };
 
-    // 5) Criar preferência
-    const resp = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const mpResp = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(mpBody)
     });
 
-    // 6) Tratar erro do MP
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return res.status(500).json({ error: 'Falha ao criar preferência', detail: txt });
+    if (!mpResp.ok) {
+      const txt = await mpResp.text();
+      return res.status(500).json({ error: 'Falha ao criar preferência MP', detail: txt });
     }
 
-    // 7) Responder ao front
-    const pref = await resp.json();
+    const pref = await mpResp.json();
+
+    // 8️⃣ — Retorna o link do checkout e o ID da reserva
     return res.status(201).json({
       ok: true,
+      reserva_id: reserva.id,
       preference_id: pref.id,
-      init_point: pref.init_point || pref.sandbox_init_point, // funciona em prod e sandbox
+      init_point: pref.init_point || pref.sandbox_init_point
     });
+
   } catch (e) {
+    console.error('Erro interno em /api/pagamentos/criar:', e);
     return res.status(500).json({ error: 'Erro interno', detail: String(e) });
   }
 }
